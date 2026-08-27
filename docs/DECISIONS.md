@@ -1,0 +1,30 @@
+# Decisions
+
+Created during the first implementation; the project had no prior architecture/decisions document.
+
+1. **React + TypeScript + Vite** for the requested interface, with explicit contracts and small components. No scientific calculations in UI components; chart coordinate scaling is display-only.
+2. **Initial milestone: retain Python scientific code.** A local FastAPI adapter reused the existing scientific libraries. Superseded for deployment by decision 12; preserved under references/python for numerical reproducibility.
+3. **Preserve originals.** Notebook and source videos remain unmodified; tests load reviewed function definitions from the original notebook.
+4. **Distance, not a grade.** Report RMSE in degrees, per feature and equal-weight aggregate. No arbitrary 0–100 conversion. Aggregation and cross-video comparison are explicitly new prototype choices requiring coach validation.
+5. **Correct image aspect ratio explicitly.** Pixel-coordinate mode is default; original normalized-coordinate mode remains available for reproducibility. Do not imply identical outputs across these modes.
+6. **Keep notebook preprocessing parameters.** Sigma 2 frames, minimum 2 seconds, prominence 15°, mean visibility 0.35, bidirectional interpolation limit 5, 40/60 samples. Expose them in reports and method docs, not as validated thresholds.
+7. **Reject incompatible supplied candidate.** Visual inspection shows the candidate video is frontal; the reference is side-on. A preview remains available, but scoring is blocked, including identical-content uploads. A new side-view candidate is required for independent evaluation. Automatic suitability detection remains TODO.
+8. **No medical inference.** Deterministic notes identify largest measured differences for coach review. Injury prediction, neck/wrist metrics, safe-angle ranges and medical suggestions are withheld until supported.
+9. **Bound resources.** Prototype limits: one active analysis, 100 MiB uploads, 120 seconds/3,600 frames, 4K. These are engineering choices; public-service hardening is not implemented.
+10. **Self-check provenance.** Identical input hashes identify self-comparison; reuse measured landmarks and label the result as a software check. Nonzero RMSE is expected from within-reference stroke variation.
+11. **Isolated Python runtime and MediaPipe pin.** Initial testing of the pre-existing MediaPipe 0.10.35 environment emitted a `portable_clearcut_uploader` telemetry attempt. The [upstream issue](https://github.com/google-ai-edge/mediapipe/issues/6291) reports similar behavior and no observed connections for 0.10.21. Pin 0.10.21 in the local virtual environment as a precaution, retaining the identical Heavy model asset. This is not a completed network/privacy audit; dependency-level outbound behavior remains TODO. Do not change the user's global installation.
+
+12. **Frontend-only Netlify deployment (user request).** Replace the Python HTTP runtime with TypeScript analysis and pinned MediaPipe Web 0.10.21. Node prepares static files; Netlify publishes only dist. No functions, API keys, database or server. Former Python modules/tests are archived, not deleted or deployed.
+13. **Explicit 30 Hz browser sampling.** Seek/decode sequentially at index/30. This avoids inference-driven dropped playback frames without adding a demuxer dependency. It does not preserve native encoded-frame identity: repeat/skip behavior and runtime differences can change measurements. Version the report schema to 2.0 and algorithm to lecture5-browser-30hz-v2; do not claim identical video-level Python outputs.
+14. **Responsive, bounded local inference.** CPU pose estimation in a classic worker (the pinned WASM loader needs importScripts); a new detector per video resets tracking. Real progress and abort/worker termination replace terminal progress. Model/runtime are same-origin static assets, integrity-checked, loaded only for analysis. No candidate-upload request or app data persistence.
+15. **Numerical port validation.** Preserve Python and generate reproducible synthetic fixtures. Test angles/features, pandas-style interpolation, SciPy-style smoothing/peaks, stroke fingerprints and all-stroke/phase RMSE with absolute 1e-9 Float64 tolerance and exact fixture index equality. Equal-height peak conflicts explicitly prefer later indices; SciPy does not guarantee its tie ordering. These are software tests, not accuracy or model-parity evidence.
+16. **Distribution boundary.** Source videos copied to static public assets; publishing requires permission. User-selected videos stay in browser memory. Do not mistake publicly hosted examples for private uploads. Web SDK presence is unavailable and exported as null.
+
+## Open questions
+
+- Can the reference video be distributed, and has a coach confirmed it as an appropriate comparison for the study?
+- What participants, stroke rates and camera protocol define the intended use?
+- What is the validated scoring rubric, if any? What is an acceptable measurement error?
+- Should long gaps reject a whole clip or only affected strokes? Should filtering be time-based or frame-based?
+- Netlify is now the hosting target. What real-device mobile support, research consent and retention policy should be adopted?
+- Are wrist/neck features sufficiently measurable in the intended view? What scientific question would they answer?

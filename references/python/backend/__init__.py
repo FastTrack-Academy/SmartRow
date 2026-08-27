@@ -1,0 +1,1 @@
+"""SmartRow local analysis service."""

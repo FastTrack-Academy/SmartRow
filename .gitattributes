@@ -1,0 +1,2 @@
+# Preserve the original research inputs byte-for-byte on every platform.
+source/** -text
