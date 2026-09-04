@@ -1,4 +1,4 @@
-# SmartRow
+# IQRow
 
 A **frontend-only React + TypeScript** rowing-motion research workspace for **Netlify static hosting**. Pose estimation, angles, stroke detection and scoring run in the visitor's browser. No Python server, API endpoint, Netlify Function, database or API key is required.
 

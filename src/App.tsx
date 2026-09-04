@@ -119,7 +119,7 @@ export default function App() {
             setPage("compare");
           }}
         >
-          Smart<span>Row</span>
+          IQ<span>Row</span>
         </a>
         <nav aria-label="Main navigation">
           <button

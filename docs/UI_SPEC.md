@@ -4,7 +4,7 @@ First-milestone design: white research workspace, dark navy text, teal actions, 
 
 ## Screens and states
 
-- Header: SmartRow, Compare, Method & limits; browser workspace label.
+- Header: IQRow, Compare, Method & limits; browser workspace label.
 - Input: real reference video and upload drop area; choose-file and supplied-candidate preview actions.
 - Selection: real candidate preview, clear/replace controls, capture confirmation; known frontal clip displays a blocking explanation.
 - Settings: Pixel-corrected or Notebook original; same/opposite facing.
