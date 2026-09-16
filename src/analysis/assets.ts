@@ -3,12 +3,15 @@ export const MODEL_SHA256 =
 export const KNOWN_FRONTAL_SHA256 =
   "6d37f5c3497028f0266ff50b9dc97b4e5315f7876b9a5cad1cf9e34922b99b46";
 export const REFERENCE_URL = "/media/reference.mov";
+export const REFERENCE_PROFILE_URL = "/reference-profile.json";
 export const CANDIDATE_URL = "/media/candidate.mov";
 export const SAMPLE_FPS = 30;
 export const MEDIAPIPE_VERSION = "0.10.21";
 
 export interface AssetManifest {
   reference_sha256: string;
+  reference_profile_sha256: string;
+  reference_profile_schema: "1.0";
   notebook_sha256: string;
   model_sha256: string;
   mediapipe_version: string;

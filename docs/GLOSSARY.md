@@ -10,11 +10,17 @@
 - **Interpolation:** estimating missing or resampled values; not creating new observations.
 - **Gaussian smoothing:** weighted averaging of neighboring measurements to reduce jitter.
 - **Prominence:** how strongly a peak/valley stands out from its surroundings.
-- **Fingerprint:** a complete stroke represented by 100 points × four angle features.
+- **Fingerprint:** a complete stroke represented by 100 points × six angle/proxy features.
 - **RMSE:** root mean squared error; here a difference in degrees, not a percentage score.
+- **Stroke-score SD:** population standard deviation of the candidate's per-stroke weighted RMSE values; a descriptive consistency measure, not measurement uncertainty.
+- **Absolute curve area:** trapezoidal integral of absolute candidate–reference angle difference over a normalized stroke, in `°·cycle`; a secondary shape diagnostic.
+- **Neck proxy:** 2D ear–shoulder–hip angle; not a direct cervical-spine measurement.
+- **Wrist proxy:** 2D elbow–wrist–hand angle using the index/pinky midpoint; not a direct anatomical wrist-joint measurement.
+- **Rank-sum weight:** transparent numerical conversion of an ordinal importance rank. Here it expresses a project hypothesis, not validated biology.
 - **Reference variability:** standard deviation among reference strokes; not confidence or safety bounds.
 - **Self-comparison:** comparing a file's strokes to their own mean; a software check, not held-out evaluation.
 - **Provenance:** source identity, settings and software/model versions needed to understand a result.
-- **Sampling grid (v2):** requested video observations at index/30 seconds; sample indices are not native encoded-frame numbers. Source frames can repeat or be skipped.
+- **Sampling grid:** requested video observations at index/30 seconds; sample indices are not native encoded-frame numbers. Source frames can repeat or be skipped.
+- **Precomputed reference profile:** versioned coach landmarks and analytical outputs created before deployment, integrity-checked and reused by every browser session.
 - **Web worker:** a separate browser execution context used to keep heavy pose estimation from blocking the interface.
 - **Static hosting:** delivery of prebuilt files; no application server runs on Netlify for this project.

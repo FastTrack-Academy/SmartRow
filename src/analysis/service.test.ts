@@ -6,6 +6,7 @@ import {
 } from "./assets";
 
 const referenceHash = "a".repeat(64);
+const profileHash = "d".repeat(64);
 const mocks = vi.hoisted(() => ({
   extract: vi.fn(),
   analyze: vi.fn(),
@@ -36,16 +37,29 @@ beforeEach(() => {
           url.includes("manifest")
             ? JSON.stringify({
                 reference_sha256: referenceHash,
+                reference_profile_sha256: profileHash,
+                reference_profile_schema: "1.0",
                 notebook_sha256: "b".repeat(64),
                 model_sha256: MODEL_SHA256,
                 mediapipe_version: MEDIAPIPE_VERSION,
               })
-            : "synthetic reference bytes",
+            : JSON.stringify({
+                reference_profile_schema: "1.0",
+                algorithm_version: "lecture5-browser-30hz-v3",
+                reference_sha256: referenceHash,
+                model_sha256: MODEL_SHA256,
+                mediapipe_version: MEDIAPIPE_VERSION,
+                landmarks: [],
+                analyses: {
+                  pixel: { video: { sha256: referenceHash } },
+                  notebook: { video: { sha256: referenceHash } },
+                },
+              }),
         ),
     ),
   );
   mocks.hash.mockImplementation(async (blob: Blob) =>
-    blob instanceof File ? "c".repeat(64) : referenceHash,
+    blob instanceof File ? "c".repeat(64) : profileHash,
   );
   mocks.extract.mockImplementation(
     async (_: Blob, name: string, sha256: string) => ({
@@ -57,7 +71,7 @@ beforeEach(() => {
   mocks.compare.mockReturnValue({ fixture: "synthetic report" });
 });
 
-it("fetches only static assets and processes candidates locally; reuses only the reference", async () => {
+it("loads the precomputed profile and processes only candidates locally", async () => {
   const { analyzeVideo } = await import("./service");
   const file = new File(["synthetic"], "candidate.mp4");
   await analyzeVideo(
@@ -74,10 +88,10 @@ it("fetches only static assets and processes candidates locally; reuses only the
     new AbortController().signal,
     vi.fn(),
   );
-  expect(mocks.extract).toHaveBeenCalledTimes(3); // reference once, candidate twice
-  expect(mocks.extract.mock.calls[1][0]).toBe(file);
+  expect(mocks.extract).toHaveBeenCalledTimes(2);
+  expect(mocks.extract.mock.calls[0][0]).toBe(file);
   for (const [url, options] of vi.mocked(fetch).mock.calls) {
-    expect(["/asset-manifest.json", "/media/reference.mov"]).toContain(url);
+    expect(["/asset-manifest.json", "/reference-profile.json"]).toContain(url);
     expect(options?.method).toBeUndefined();
     expect(options?.body).toBeUndefined();
   }
@@ -99,8 +113,10 @@ it("blocks the known frontal upload before fetching any assets", async () => {
   expect(mocks.extract).not.toHaveBeenCalled();
 });
 
-it("reuses measured reference landmarks only for identical content", async () => {
-  mocks.hash.mockResolvedValue(referenceHash);
+it("reuses precomputed landmarks when the candidate is the reference file", async () => {
+  mocks.hash.mockImplementation(async (blob: Blob) =>
+    blob instanceof File ? referenceHash : profileHash,
+  );
   const { analyzeVideo } = await import("./service");
   await analyzeVideo(
     new File(["x"], "reference.mov"),
@@ -109,7 +125,7 @@ it("reuses measured reference landmarks only for identical content", async () =>
     new AbortController().signal,
     vi.fn(),
   );
-  expect(mocks.extract).toHaveBeenCalledTimes(1);
+  expect(mocks.extract).not.toHaveBeenCalled();
 });
 
 it("abort prevents extraction and releases the run guard for retry", async () => {
@@ -129,8 +145,7 @@ it("abort prevents extraction and releases the run guard for retry", async () =>
 it("does not return a score for candidate decoding failure", async () => {
   mocks.extract.mockImplementation(
     async (_: Blob, name: string, sha256: string) => {
-      if (name !== "Video.mov") throw new Error("codec failure");
-      return { info: { name, sha256 }, history: [] };
+      throw new Error(`codec failure: ${name} ${sha256}`);
     },
   );
   const { analyzeVideo } = await import("./service");

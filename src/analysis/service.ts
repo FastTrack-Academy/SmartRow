@@ -1,10 +1,15 @@
-import type { AnalysisProgress, CoordinateMode } from "../contracts";
+import type {
+  AnalysisProgress,
+  CoordinateMode,
+  ReferenceProfileBundle,
+  VideoAnalysis,
+} from "../contracts";
 import { extractVideo } from "./acquisition";
 import {
   assertSuitableHash,
   MEDIAPIPE_VERSION,
   MODEL_SHA256,
-  REFERENCE_URL,
+  REFERENCE_PROFILE_URL,
   sha256,
   type AssetManifest,
 } from "./assets";
@@ -12,8 +17,10 @@ import { analyzeLandmarks, DEFAULT_CONFIG } from "./pipeline";
 import { browserSupportError } from "./pose-client";
 import { compare } from "./scoring";
 
-// One reference only, in memory. No candidate or result persistence.
-let cachedReference: Awaited<ReturnType<typeof extractVideo>> | undefined;
+// The deployable coach profile is precomputed. No candidate or result persistence.
+let cachedProfile:
+  | { sha256: string; bundle: ReferenceProfileBundle }
+  | undefined;
 let busy = false;
 
 export async function analyzeVideo(
@@ -48,14 +55,16 @@ export async function analyzeVideo(
     if (
       manifest.model_sha256 !== MODEL_SHA256 ||
       manifest.mediapipe_version !== MEDIAPIPE_VERSION ||
-      !/^[a-f0-9]{64}$/.test(manifest.reference_sha256)
+      manifest.reference_profile_schema !== "1.0" ||
+      !/^[a-f0-9]{64}$/.test(manifest.reference_sha256) ||
+      !/^[a-f0-9]{64}$/.test(manifest.reference_profile_sha256)
     ) {
       throw new Error(
         "Static asset versions do not match this application. Rebuild and redeploy.",
       );
     }
-    if (cachedReference?.info.sha256 !== manifest.reference_sha256)
-      cachedReference = undefined;
+    if (cachedProfile?.sha256 !== manifest.reference_profile_sha256)
+      cachedProfile = undefined;
     const reportProgress =
       (stage: "reference" | "candidate") =>
       (completed: number, total: number) =>
@@ -68,31 +77,40 @@ export async function analyzeVideo(
               ? `Loading the pose model for the ${stage}…`
               : `Processing ${stage}: ${completed} / ${total} sampled frames`,
         });
-    if (!cachedReference) {
+    if (!cachedProfile) {
       progress({
         stage: "loading",
-        message: "Loading the coach reference from this site…",
+        message: "Loading the precomputed coach profile…",
       });
-      const response = await fetch(REFERENCE_URL, { signal });
+      const response = await fetch(REFERENCE_PROFILE_URL, { signal });
       if (!response.ok)
-        throw new Error("Coach reference is missing from this deployment.");
-      const referenceBlob = await response.blob();
-      if ((await sha256(referenceBlob)) !== manifest.reference_sha256)
-        throw new Error("Coach reference integrity check failed.");
-      cachedReference = await extractVideo(
-        referenceBlob,
-        "Video.mov",
-        manifest.reference_sha256,
-        signal,
-        reportProgress("reference"),
-      );
+        throw new Error("Precomputed coach profile is missing from this deployment.");
+      const profileBlob = await response.blob();
+      if ((await sha256(profileBlob)) !== manifest.reference_profile_sha256)
+        throw new Error("Coach profile integrity check failed.");
+      const bundle = JSON.parse(await profileBlob.text()) as ReferenceProfileBundle;
+      if (
+        bundle.reference_profile_schema !== "1.0" ||
+        bundle.algorithm_version !== "lecture5-browser-30hz-v3" ||
+        bundle.reference_sha256 !== manifest.reference_sha256 ||
+        bundle.model_sha256 !== MODEL_SHA256 ||
+        bundle.mediapipe_version !== MEDIAPIPE_VERSION ||
+        !bundle.analyses?.pixel ||
+        !bundle.analyses?.notebook
+      )
+        throw new Error("Precomputed coach profile is incompatible with this application.");
+      cachedProfile = { sha256: manifest.reference_profile_sha256, bundle };
     }
     signal.throwIfAborted();
+    const reference: VideoAnalysis = {
+      ...cachedProfile.bundle.analyses[mode],
+      landmarks: cachedProfile.bundle.landmarks,
+    };
     const extracted =
-      candidateHash === cachedReference.info.sha256
+      candidateHash === reference.video.sha256
         ? {
-            ...cachedReference,
-            info: { ...cachedReference.info, name: file.name },
+            history: cachedProfile.bundle.landmarks,
+            info: { ...reference.video, name: file.name },
           }
         : await extractVideo(
             file,
@@ -112,11 +130,6 @@ export async function analyzeVideo(
       coordinate_mode: mode,
       mirror_candidate: mirror,
     };
-    const reference = analyzeLandmarks(
-      cachedReference.history,
-      cachedReference.info,
-      config,
-    );
     const candidate = analyzeLandmarks(
       extracted.history,
       extracted.info,
@@ -133,6 +146,8 @@ export async function analyzeVideo(
         "Browser seek grid at 30 Hz; frame indices are sampled observations, not native encoded frame numbers",
       presence: "Not exposed by web SDK; exported as null",
       peak_ties: "Equal-height distance conflicts prefer the later sample",
+      reference_profile:
+        "Precomputed v1 bundle; fixed measured coach landmarks are not re-inferred per browser session",
     });
   } finally {
     busy = false;

@@ -13,6 +13,7 @@ public/models/
 public/vendor/
 public/pose-worker.js
 public/asset-manifest.json
+public/reference-profile.json
 .netlify/
 .env
 .env.*

@@ -1,12 +1,13 @@
-import { useState } from "react";
-import type { ComparisonReport } from "../contracts";
+import { useMemo, useState } from "react";
+import type { ComparisonReport, FeatureWeights } from "../contracts";
 import { FEATURE_LABELS } from "../contracts";
+import { applyWeights, DEFAULT_WEIGHTS } from "../analysis/scoring";
 import { downloadFile, signalsCsv } from "../files";
 import { SignalChart } from "./SignalChart";
 import { Icon } from "./Icon";
 
 export function Results({
-  report,
+  report: baseReport,
   onSeek,
 }: {
   report: ComparisonReport | null;
@@ -18,6 +19,20 @@ export function Results({
     "candidate",
   );
   const [stage, setStage] = useState<"raw" | "processed" | "smooth">("smooth");
+  const [weights, setWeights] = useState<FeatureWeights>(
+    baseReport?.weights ?? DEFAULT_WEIGHTS,
+  );
+  const weightTotal = Object.values(weights).reduce(
+    (sum, value) => sum + value,
+    0,
+  );
+  const report = useMemo(
+    () =>
+      baseReport && weightTotal > 0
+        ? applyWeights(baseReport, weights)
+        : baseReport,
+    [baseReport, weights, weightTotal],
+  );
   const selected = report
     ? stroke >= 0
       ? report.candidate.fingerprints[stroke]
@@ -31,6 +46,7 @@ export function Results({
         {report ? (
           <button
             className="button secondary small"
+            disabled={weightTotal <= 0}
             onClick={() =>
               downloadFile(
                 JSON.stringify(report, null, 2),
@@ -68,9 +84,11 @@ export function Results({
           <p className="evidence-note">{report.evidence_status}</p>
           <div className="score-summary">
             <div>
-              <span className="metric-label">Overall motion difference</span>
+              <span className="metric-label">Weighted motion difference</span>
               <div className="score">
-                {report.overall_rmse_degrees.toFixed(1)}
+                {weightTotal > 0
+                  ? report.weighted_rmse_degrees.toFixed(1)
+                  : "—"}
                 <span>° RMSE</span>
               </div>
             </div>
@@ -80,8 +98,15 @@ export function Results({
               <strong>Not a technique grade or an injury-risk score.</strong>
             </p>
             <div className="metric-detail">
-              <strong>{report.candidate.strokes.length}</strong>
-              <span>complete candidate strokes</span>
+              <strong>
+                {weightTotal > 0
+                  ? `${report.stroke_score_mean_degrees.toFixed(1)} ± ${report.stroke_score_std_degrees.toFixed(1)}°`
+                  : "—"}
+              </strong>
+              <span>
+                stroke mean ± population SD across {report.candidate.strokes.length}{" "}
+                complete strokes
+              </span>
             </div>
           </div>
           <div className="result-toolbar">
@@ -145,7 +170,10 @@ export function Results({
               <thead>
                 <tr>
                   <th>Feature</th>
+                  <th>Weight input</th>
                   <th>RMSE</th>
+                  <th>Stroke RMSE mean ± SD</th>
+                  <th>Absolute curve area mean ± SD</th>
                   <th>Drive RMSE</th>
                   <th>Recovery RMSE</th>
                 </tr>
@@ -154,7 +182,40 @@ export function Results({
                 {report.features.map((item) => (
                   <tr key={item.feature}>
                     <th>{item.label}</th>
+                    <td>
+                      <label className="weight-input">
+                        <span className="sr-only">
+                          {item.label} weight percent
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={Number((weights[item.feature] * 100).toFixed(2))}
+                          onChange={(event) =>
+                            setWeights((current) => ({
+                              ...current,
+                              [item.feature]:
+                                Math.max(
+                                  0,
+                                  Number(event.target.value) || 0,
+                                ) / 100,
+                            }))
+                          }
+                        />
+                        <span>%</span>
+                      </label>
+                    </td>
                     <td>{item.rmse_degrees.toFixed(2)}°</td>
+                    <td>
+                      {item.stroke_rmse_mean_degrees.toFixed(2)} ±{" "}
+                      {item.stroke_rmse_std_degrees.toFixed(2)}°
+                    </td>
+                    <td>
+                      {item.absolute_curve_area_degree_cycle.toFixed(2)} ±{" "}
+                      {item.stroke_area_std_degree_cycle.toFixed(2)} °·cycle
+                    </td>
                     <td>{item.drive_rmse_degrees.toFixed(2)}°</td>
                     <td>{item.recovery_rmse_degrees.toFixed(2)}°</td>
                   </tr>
@@ -162,6 +223,23 @@ export function Results({
               </tbody>
             </table>
           </div>
+          <div className="weight-note">
+            <p>
+              Editable project weights · entered total{" "}
+              {(weightTotal * 100).toFixed(1)}%. Values are normalized to 100%
+              when calculating the score. Default rank-sum order: trunk → elbow
+              → neck → wrist → knee → hip.
+            </p>
+            <button
+              className="text-button"
+              onClick={() => setWeights(DEFAULT_WEIGHTS)}
+            >
+              Reset default weights
+            </button>
+          </div>
+          {weightTotal <= 0 ? (
+            <p className="inline-warning">Set at least one weight above zero.</p>
+          ) : null}
           <div className="review-notes">
             <h3>What to review with your coach</h3>
             <ol>
@@ -309,6 +387,10 @@ export function Results({
               Algorithm: {report.algorithm_version} · coordinates:{" "}
               {report.config.coordinate_mode} · candidate mirrored for analysis:{" "}
               {String(report.config.mirror_candidate)}
+            </p>
+            <p>
+              Coach features were loaded from a versioned precomputed profile;
+              only the candidate pose was inferred in this session.
             </p>
             <p>
               sigma {report.config.smoothing_sigma} frames · catch prominence{" "}

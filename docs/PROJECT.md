@@ -7,8 +7,8 @@ This document was created for the first web implementation. It records the user 
 - **User:** student researcher and a rower/coach reviewing a recording. Broader user research is TODO.
 - **Problem:** make video-derived movement patterns inspectable and comparable with a user-designated coach video.
 - **Input:** one candidate recording and the supplied reference; coordinate mode, facing direction, and user-confirmed capture suitability.
-- **Automation:** video decoding → MediaPipe pose estimation → active-side selection → four angle signals → interpolation → smoothing → catches/finishes → 100-point fingerprints → per-feature and aggregate RMSE → deterministic review notes.
-- **Output:** measured estimates, raw landmarks, angle curves, timing, similarity distances, quality indicators, limitations, downloadable report.
+- **Automation:** load precomputed fixed coach profile; candidate decoding → MediaPipe pose estimation → active-side selection → six angle/proxy signals → interpolation → smoothing → catches/finishes → 100-point fingerprints → RMSE/absolute curve area/stroke variability → editable weighted RMSE → deterministic review notes.
+- **Output:** measured estimates, raw landmarks, six curves, timing, feature differences, one weighted difference in degrees, per-stroke SD, quality indicators, limitations, downloadable report.
 - **User action:** review pose tracking and stroke boundaries, discuss differences with a coach, export data, and record a better controlled clip. No medical decisions are supported.
 
 ## Reuse inventory
@@ -23,7 +23,7 @@ This document was created for the first web implementation. It records the user 
 | Notebook cached outputs | Do not treat as new results | They belong to the original demonstration |
 | Coach video | Retain as user-designated reference | Coach validation/consent still TODO |
 | Supplied candidate | Retain for preview and rejection test | Front-facing view violates the side-view assumption |
-| Wrist and neck notes | Defer | Definitions and validation are unresolved |
+| Wrist and neck notes | Implement as labeled 2D proxies | Definitions are explicit; manual validation remains unresolved |
 
 No README, AGENTS, docs, references directory, prototypes directory or Git history existed at initial inspection. The source notebook was the only scientific document. No additional dataset or validated scoring rubric was supplied.
 
@@ -31,4 +31,4 @@ No README, AGENTS, docs, references directory, prototypes directory or Git histo
 
 Current software target: frontend-only Netlify static hosting, explicitly requested after the initial local-service implementation. Browser acquisition samples at 30 Hz; see SCIENCE and DECISIONS for the versioned change. The old Python implementation remains optional reference material only.
 
-Record a second side-view video using comparable framing and camera placement. Have a coach label catches/finishes and review manually annotated joint angles before calibrating any technique score.
+Record controlled side-view videos from multiple rowers using comparable framing and camera placement. Have a coach label catches/finishes and independently annotate all six signals. Pre-register how the editable weights will be validated on held-out rowers before treating the weighted distance as a performance measure.

@@ -21,13 +21,14 @@ it("exports raw missing measurements as blanks, never zero", () => {
         frame: 0,
         time_s: 0,
         quality: 0.4,
-        raw: [null, 90, 90, 0],
-        processed: [50, 90, 90, 0],
-        smooth: [51, 90, 90, 0],
+        raw: [null, 90, 90, 0, 80, 170],
+        processed: [50, 90, 90, 0, 80, 170],
+        smooth: [51, 90, 90, 0, 80, 170],
       },
     ],
   } as VideoAnalysis;
   const csv = signalsCsv(fixture);
   expect(csv).toContain("raw_knee_degrees");
-  expect(csv.split("\n")[1]).toBe("0,0,0.4,,90,90,0,50,90,90,0,51,90,90,0");
+  expect(csv).toContain("raw_neck_proxy_degrees");
+  expect(csv.split("\n")[1]).toContain("0,0,0.4,,90,90,0,80,170");
 });

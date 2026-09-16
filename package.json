@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "generate:reference": "vite-node scripts/generate-reference-profile.ts",
     "prepare:assets": "node scripts/prepare-assets.mjs",
     "predev": "npm run prepare:assets",
     "dev": "vite --host 127.0.0.1",

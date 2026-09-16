@@ -54,11 +54,11 @@ Open the preview URL, normally http://127.0.0.1:4173. No Python process is neede
 1. Review the reference and **Method & limits**.
 2. Select/drop one supported fixed full-body side-view video, and confirm capture suitability.
 3. Choose pixel-corrected or original notebook coordinates and the candidate's facing direction.
-4. Click **Analyze & compare**. Actual sampled-frame progress appears; first analysis also processes the reference. Allow several minutes on slower devices. **Cancel analysis** stops the worker.
-5. Inspect overlays, RMSE, raw/interpolated/smoothed signals, catches and timing. **View catch** seeks to a sampled boundary.
+4. Click **Analyze & compare**. The coach profile is precomputed; actual sampled-frame progress covers only the candidate. Allow several minutes on slower devices. **Cancel analysis** stops the worker.
+5. Inspect six feature curves, the weighted difference, per-stroke mean±SD, absolute curve area, raw/interpolated/smoothed signals, catches and timing. Edit the displayed weights to run a sensitivity check without reanalyzing the video. **View catch** seeks to a sampled boundary.
 6. Export JSON/CSV with permission: reports contain landmarks and file hashes.
 
-RMSE is a difference in degrees, not a 0–100 grade, safety rating or injury prediction. Notes identify differences to discuss with a coach.
+RMSE is a difference in degrees, not a 0–100 grade, safety rating or injury prediction. Neck/wrist values are provisional 2D proxies. The default rank-sum weights are an editable project hypothesis, not validated biomechanical importance. Notes identify differences to discuss with a coach.
 
 ## Scientific and technical limits
 
@@ -66,9 +66,9 @@ The supplied `Video.mov` reference is side-facing; `Video_1.mov` is front-facing
 
 - Browser-supported MP4/MOV/M4V/WebM: actual codec must decode in the browser. H.264 MP4 is a practical choice.
 - Engineering limits: 100 MiB, 120 s, 3,600 sampled frames, 4K, one active run per page—not scientific thresholds.
-- **Schema v2 sampling:** seek at 30 Hz. `fps`, frame indices and counts refer to the sample grid, not native encoded frames. Original frames can repeat or be skipped. This is not exact OpenCV frame extraction.
+- **Schema v3 sampling:** seek at 30 Hz. `fps`, frame indices and counts refer to the sample grid, not native encoded frames. Original frames can repeat or be skipped. This is not exact OpenCV frame extraction.
 - Same Heavy model, pinned MediaPipe Web 0.10.21, CPU worker. Browser/Python inference parity is unproven. Web-SDK presence is unavailable and exported as null.
-- App requests only static assets from its origin; it contains no video-upload request. One reference sequence is cached in page memory. Results are not persisted by the app; reload/close clears app state. Public HTTP asset caching is separate.
+- App requests only static assets from its origin; it contains no video-upload request. A versioned coach profile is computed before deployment, copied as a static asset and integrity-checked in the browser. Results are not persisted by the app; reload/close clears app state. Public HTTP asset caching is separate.
 - HTTPS or localhost, WebAssembly, Workers, OffscreenCanvas and ImageBitmap are required. Real-device mobile performance and cross-browser scientific repeatability remain TODO.
 
 ## Project guide

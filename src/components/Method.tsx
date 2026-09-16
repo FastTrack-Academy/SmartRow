@@ -26,11 +26,18 @@ export function Method() {
             </p>
           </li>
           <li>
-            <strong>Extract four angle signals</strong>
+            <strong>Extract six angle signals</strong>
             <p>
               Knee: hip–knee–ankle. Hip: shoulder–hip–knee. Elbow:
               shoulder–elbow–wrist. Trunk: shoulder relative to the vertical
-              through the hip.
+              through the hip. Neck proxy: ear–shoulder–hip. Wrist proxy:
+              elbow–wrist–the midpoint of index and pinky landmarks.
+            </p>
+            <p>
+              The last two are provisional 2D landmark proxies, not anatomical
+              cervical or wrist-joint measurements. Every landmark needed by a
+              feature must meet the visibility threshold for that raw value to
+              count as measured.
             </p>
             <p>
               Pixel-corrected mode multiplies x by frame width and y by frame
@@ -56,14 +63,25 @@ export function Method() {
               Resample each drive to 40 points, then each recovery to 60 more,
               without duplicating the finish. Compare each candidate stroke
               against the mean of the reference strokes using root mean squared
-              error (RMSE).
+              error (RMSE). The coach landmarks and both coordinate-mode
+              profiles were computed before deployment, so each session runs
+              pose inference only on the candidate.
             </p>
             <code>RMSE = √mean((candidate − reference mean)²)</code>
             <p>
               Feature scores average squared errors over all candidate strokes
-              and all 100 points. The overall score also averages across the
-              four features with equal weight. This aggregation is a new,
-              unvalidated extension—not an original notebook result.
+              and all 100 points. The central weighted difference uses the
+              editable rank-sum hypothesis trunk 6, elbow 5, neck 4, wrist 3,
+              knee 2, hip 1, normalized to 100%, and remains in degrees. It is
+              not a 0–100 grade or a validated rowing rubric.
+            </p>
+            <code>Weighted RMSE = √Σ(weight × feature RMSE²)</code>
+            <p>
+              The population standard deviation of per-stroke weighted RMSE
+              describes within-video consistency. Absolute curve area integrates
+              absolute feature difference across the normalized stroke in
+              °·cycle. It is a secondary view of the same residuals and is not
+              included in the central score.
             </p>
           </li>
         </ol>
@@ -83,8 +101,9 @@ export function Method() {
           supplied clip is also blocked by its content hash.
         </p>
         <p>
-          Neck and wrist measurements remain phase-two ideas in the notebook.
-          Perspective, camera direction, body proportions, tracking error,
+          Neck and wrist were only phase-two ideas in the notebook; their new
+          proxy definitions still require manual validation. Perspective,
+          camera direction, body proportions, tracking error,
           fatigue and stroke rate can all affect comparisons. A mirrored
           candidate must be identified by the user; the tool does not detect
           camera suitability automatically.
@@ -155,6 +174,22 @@ export function Method() {
             rel="noreferrer"
           >
             SciPy peak detection
+          </a>
+          {" "}·{" "}
+          <a
+            href="https://doi.org/10.2174/1874387001206010022"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Ergometer-rowing kinematics study
+          </a>
+          {" "}·{" "}
+          <a
+            href="https://doi.org/10.15290/ose.2013.05.65.02"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Rank-order weighting methods
           </a>
         </p>
       </section>

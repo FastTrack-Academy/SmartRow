@@ -1,4 +1,5 @@
 import type { VideoAnalysis } from "./contracts";
+import { FEATURE_DEFINITIONS } from "./contracts";
 
 export function validateVideo(
   file: Pick<File, "name" | "size">,
@@ -22,7 +23,7 @@ export function downloadFile(content: string, name: string, type: string) {
 }
 
 export function signalsCsv(analysis: VideoAnalysis): string {
-  const names = ["knee", "hip", "elbow", "trunk"];
+  const names = FEATURE_DEFINITIONS.map(({ key }) => key.replace("_angle", ""));
   const header = [
     "frame",
     "time_s",

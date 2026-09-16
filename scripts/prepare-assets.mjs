@@ -57,6 +57,12 @@ const media = [
 ];
 for (const [source, destination] of media)
   await copyFile(path.join(root, source), path.join(output, destination));
+const profileSource = path.join(
+  root,
+  "references/profiles/coach-reference-browser-30hz-v3.json",
+);
+const profileDestination = path.join(output, "reference-profile.json");
+await copyFile(profileSource, profileDestination);
 const packageRoot = path.join(root, "node_modules/@mediapipe/tasks-vision");
 await cp(
   path.join(packageRoot, "wasm"),
@@ -90,6 +96,8 @@ await writeFile(
   JSON.stringify(
     {
       reference_sha256: hash(await readFile(path.join(root, media[0][0]))),
+      reference_profile_sha256: hash(await readFile(profileSource)),
+      reference_profile_schema: "1.0",
       notebook_sha256: hash(
         await readFile(
           path.join(
@@ -106,5 +114,5 @@ await writeFile(
   ),
 );
 console.log(
-  "Static videos, verified model, WASM runtime and pose worker are ready.",
+  "Static videos, precomputed coach profile, verified model, WASM runtime and pose worker are ready.",
 );

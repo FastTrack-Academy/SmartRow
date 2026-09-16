@@ -17,7 +17,7 @@ import {
   preprocess,
   standardize,
 } from "./pipeline";
-import { compare } from "./scoring";
+import { applyWeights, compare } from "./scoring";
 import { assertSuitableHash, KNOWN_FRONTAL_SHA256 } from "./assets";
 import { samplingMetadata } from "./acquisition";
 import type { VideoAnalysis, VideoInfo } from "../contracts";
@@ -65,12 +65,13 @@ describe("Python mathematical parity (synthetic; not scientific validation)", ()
         },
         row.mirror,
       );
-      close(result.raw, row.expected);
+      close(result.raw.slice(0, 4), row.expected);
+      expect(result.raw.slice(4)).toHaveLength(2);
     }
     expect(selectSide([fixture.landmarks])).toBe("left");
     expect(
       extractFeatures(null, "left", info, DEFAULT_CONFIG, false).raw,
-    ).toEqual([null, null, null, null]);
+    ).toEqual([null, null, null, null, null, null]);
     expect(
       extractFeatures(
         fixture.landmarks.map((l) => ({ ...l, visibility: 0.1 })),
@@ -79,7 +80,31 @@ describe("Python mathematical parity (synthetic; not scientific validation)", ()
         DEFAULT_CONFIG,
         false,
       ).raw,
-    ).toEqual([null, null, null, null]);
+    ).toEqual([null, null, null, null, null, null]);
+  });
+  it("keeps neck and wrist proxies mirror-invariant and gates them independently", () => {
+    const original = extractFeatures(
+      fixture.landmarks,
+      "left",
+      info,
+      DEFAULT_CONFIG,
+      false,
+    );
+    const mirrored = extractFeatures(
+      fixture.landmarks,
+      "left",
+      info,
+      DEFAULT_CONFIG,
+      true,
+    );
+    close(mirrored.raw.slice(4), original.raw.slice(4));
+    const lowEar = fixture.landmarks.map((landmark, index) => ({
+      ...landmark,
+      visibility: index === 7 ? 0 : landmark.visibility,
+    }));
+    const gated = extractFeatures(lowEar, "left", info, DEFAULT_CONFIG, false);
+    expect(gated.raw[4]).toBeNull();
+    expect(gated.raw.slice(0, 4).every((value) => value !== null)).toBe(true);
   });
   it("matches pandas bidirectional interpolation including rejected edge and long gaps", () => {
     for (const row of fixture.interpolations) {
@@ -130,23 +155,24 @@ describe("Python mathematical parity (synthetic; not scientific validation)", ()
   it("matches all-stroke, per-feature, phase and aggregate distances", () => {
     const analysis = {
       video: info,
-      fingerprints: fixture.pipeline.fingerprints,
-      mean: fixture.pipeline.mean,
+      fingerprints: fixture.pipeline.fingerprints.map((stroke) =>
+        stroke.map((row) => [...row, 0, 0]),
+      ),
+      mean: fixture.pipeline.mean.map((row) => [...row, 0, 0]),
     } as VideoAnalysis;
     const report = compare(analysis, analysis, DEFAULT_CONFIG, {
       fixture: "synthetic",
     });
-    close(report.overall_rmse_degrees, fixture.pipeline.overall_rmse);
     close(
-      report.features.map((f) => f.rmse_degrees),
+      report.features.slice(0, 4).map((f) => f.rmse_degrees),
       fixture.pipeline.feature_rmse,
     );
     close(
-      report.features.map((f) => f.drive_rmse_degrees),
+      report.features.slice(0, 4).map((f) => f.drive_rmse_degrees),
       fixture.pipeline.drive_rmse,
     );
     close(
-      report.features.map((f) => f.recovery_rmse_degrees),
+      report.features.slice(0, 4).map((f) => f.recovery_rmse_degrees),
       fixture.pipeline.recovery_rmse,
     );
     expect(report.evidence_status).toContain("Self-comparison");
@@ -155,7 +181,7 @@ describe("Python mathematical parity (synthetic; not scientific validation)", ()
 
 describe("failure guards and invariants", () => {
   it("does not average away candidate variation before scoring", () => {
-    const zeros = Array.from({ length: 100 }, () => [0, 0, 0, 0]);
+    const zeros = Array.from({ length: 100 }, () => [0, 0, 0, 0, 0, 0]);
     const reference = {
       video: info,
       fingerprints: [zeros],
@@ -171,6 +197,54 @@ describe("failure guards and invariants", () => {
     expect(
       compare(reference, candidate, DEFAULT_CONFIG, {}).overall_rmse_degrees,
     ).toBe(10);
+  });
+  it("reports per-stroke stability, curve area and editable weighted scoring", () => {
+    const zeros = Array.from({ length: 100 }, () => [0, 0, 0, 0, 0, 0]);
+    const reference = {
+      video: info,
+      fingerprints: [zeros],
+      mean: zeros,
+    } as VideoAnalysis;
+    const candidate = {
+      ...reference,
+      video: { ...info, sha256: "candidate" },
+      fingerprints: [
+        zeros.map((row) => row.map(() => 10)),
+        zeros.map((row) => row.map(() => 20)),
+      ],
+    };
+    const report = compare(reference, candidate, DEFAULT_CONFIG, {});
+    expect(report.stroke_score_mean_degrees).toBeCloseTo(15);
+    expect(report.stroke_score_std_degrees).toBeCloseTo(5);
+    expect(report.features[0].absolute_curve_area_degree_cycle).toBeCloseTo(15);
+    expect(report.features[0].stroke_area_std_degree_cycle).toBeCloseTo(5);
+    expect(Object.values(report.weights).reduce((a, b) => a + b, 0)).toBeCloseTo(1);
+  });
+  it("normalizes edited weights and changes only the weighted aggregate", () => {
+    const zeros = Array.from({ length: 100 }, () => [0, 0, 0, 0, 0, 0]);
+    const reference = {
+      video: info,
+      fingerprints: [zeros],
+      mean: zeros,
+    } as VideoAnalysis;
+    const candidate = {
+      ...reference,
+      video: { ...info, sha256: "candidate" },
+      fingerprints: [zeros.map(() => [10, 0, 0, 0, 0, 0])],
+    };
+    const report = compare(reference, candidate, DEFAULT_CONFIG, {});
+    const kneeOnly = applyWeights(report, {
+      knee_angle: 7,
+      hip_angle: 0,
+      elbow_angle: 0,
+      trunk_lean: 0,
+      neck_proxy: 0,
+      wrist_proxy: 0,
+    });
+    expect(kneeOnly.weighted_rmse_degrees).toBe(10);
+    expect(kneeOnly.weights.knee_angle).toBe(1);
+    expect(kneeOnly.features[0].rmse_degrees).toBe(report.features[0].rmse_degrees);
+    expect(kneeOnly.feedback[0]).toContain("knee");
   });
   it("rejects missing poses and constant signals without complete strokes", () => {
     expect(() => analyzeLandmarks([null, null], info, DEFAULT_CONFIG)).toThrow(

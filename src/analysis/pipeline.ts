@@ -5,6 +5,7 @@ import type {
   VideoAnalysis,
   VideoInfo,
 } from "../contracts";
+import { FEATURE_DEFINITIONS } from "../contracts";
 import { extractFeatures, selectSide } from "./features";
 import { findPeaks, gaussian, interpolate, mean, resample } from "./math";
 
@@ -21,7 +22,8 @@ export const DEFAULT_CONFIG: AnalysisConfig = {
 };
 
 export function preprocess(raw: (number | null)[][], config: AnalysisConfig) {
-  const columns = [0, 1, 2, 3].map((j) =>
+  const featureCount = raw[0]?.length ?? FEATURE_DEFINITIONS.length;
+  const columns = Array.from({ length: featureCount }, (_, j) =>
     interpolate(
       raw.map((row) => row[j] ?? NaN),
       config.interpolation_limit,
@@ -84,7 +86,8 @@ export function standardize(
   stroke: Stroke,
   config: AnalysisConfig,
 ): number[][] {
-  const columns = [0, 1, 2, 3].map((j) => [
+  const featureCount = smooth[0]?.length ?? FEATURE_DEFINITIONS.length;
+  const columns = Array.from({ length: featureCount }, (_, j) => [
     ...resample(
       smooth
         .slice(stroke.catch_frame, stroke.finish_frame + 1)

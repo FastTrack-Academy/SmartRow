@@ -8,8 +8,8 @@ First-milestone design: white research workspace, dark navy text, teal actions, 
 - Input: real reference video and upload drop area; choose-file and supplied-candidate preview actions.
 - Selection: real candidate preview, clear/replace controls, capture confirmation; known frontal clip displays a blocking explanation.
 - Settings: Pixel-corrected or Notebook original; same/opposite facing.
-- Processing: controls disabled, actual sampled-frame counts/progress bar and Cancel analysis button. Model initialization is indeterminate; no invented percentage. State that video stays in the browser.
-- Results: RMSE, four feature selectors, reference mean±SD and candidate mean/individual stroke, phase RMSE table, review notes.
+- Processing: controls disabled, actual candidate sampled-frame counts/progress bar and Cancel analysis button. The coach profile is explicitly precomputed. Model initialization is indeterminate; no invented percentage. State that video stays in the browser.
+- Results: one weighted difference in degrees, per-stroke mean±SD, six feature selectors, reference mean±SD and candidate mean/individual stroke, editable normalized feature weights, phase RMSE and absolute curve-area table, review notes.
 - Inspector: raw/interpolated/smoothed time series, coverage and missing-data warnings, catches, stroke table, seek-to-catch, CSV/JSON exports, provenance and limitations.
 - Errors: unsupported browser/codec, empty/oversize file, missing/incompatible static assets, known unsuitable view, missing pose/long gaps/no complete strokes; no residual score after a new run fails or is cancelled.
 - Method: source workflow, 30 Hz browser seek sampling, mathematical definition, settings, restrictions, validation TODOs and browser-local data handling. No Python setup instructions in the interface.

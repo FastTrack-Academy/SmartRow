@@ -369,9 +369,8 @@ export default function App() {
                     {progress?.message ?? "Starting browser analysis…"}
                   </strong>
                   <p>
-                    The first run processes the reference too. This may take a
-                    few minutes. Keep this page open. No video upload is
-                    required.
+                    The coach profile is already computed. This run processes
+                    only your candidate video locally. Keep this page open.
                   </p>
                   {progress?.total ? (
                     <progress
@@ -418,7 +417,7 @@ export default function App() {
                 <h3>Research, not diagnosis</h3>
                 <p>
                   Similarity does not establish safe technique. Injury
-                  prediction and a validated 0–100 score remain future research.
+                  prediction and a validated technique grade remain future research.
                 </p>
               </div>
             </aside>
